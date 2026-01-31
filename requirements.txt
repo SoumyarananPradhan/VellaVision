@@ -17,3 +17,5 @@ sqlparse==0.5.5
 typing-extensions==4.15.0
 typing-inspection==0.4.2
 tzdata==2025.3
+dj-database-url
+psycopg2-binary
