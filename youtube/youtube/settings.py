@@ -31,7 +31,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
+CSRF_TRUSTED_ORIGINS = [
+    'https://vellavision-production-b04d.up.railway.app'
+]
 # Application definition
 
 INSTALLED_APPS = [
