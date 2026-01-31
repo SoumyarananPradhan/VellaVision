@@ -14,7 +14,14 @@
 <div class="video-player-container">
     <div class="video-player">
         
-        <video id="video-player" controls autoplay width="100%" class="video-player" poster="{{ video.thumbnail.url }}">
+        <video 
+            id="video-player" 
+            controls 
+            autoplay 
+            width="100%" 
+            class="video-player" 
+            {% if video.thumbnail %} poster="{{ video.thumbnail.url }}" {% endif %}
+        >
             <source src="{% cloudinary_url video.video_file.name resource_type='video' %}" type="video/mp4">
             Your browser does not support the video tag.
         </video>
