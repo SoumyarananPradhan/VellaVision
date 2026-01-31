@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'cloudinary_storage',
     'django.contrib.staticfiles',
+    'cloudinary',
     'accounts',
     'videos',
 ]
@@ -132,3 +134,16 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
+
+# Cloudinary Config
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dmsfilokg',
+    'API_KEY': '615411164214967',
+    'API_SECRET': 'Tp6UalBLpkKGiXdFmUKW2szvpiI',
+}
+
+# Tell Django to store media in Cloudinary
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Keep media URL as is (Cloudinary handles the rest)
+MEDIA_URL = '/media/'
