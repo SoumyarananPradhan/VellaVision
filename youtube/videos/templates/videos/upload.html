@@ -63,48 +63,26 @@
 <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 
 <script>
-const $ = id => document.getElementById(id);
-let uploadedVideoUrl = "";
-
-// 2. Initialize the Cloudinary Widget
+// Inside your upload.html <script>
 const myWidget = cloudinary.createUploadWidget({
-    cloudName: 'dmsfilokg', // From your dashboard
-    uploadPreset: 'vellavision_preset', // THE NAME YOU CREATED IN SETTINGS
+    cloudName: 'dmsfilokg', // Your Cloud Name
+    uploadPreset: 'vellavision_preset', // Use the exact name you just saved
     resourceType: 'video',
-    chunkSize: 6000000, // 6MB Chunks for large files
-    clientAllowedFormats: ["mp4", "mov", "avi"],
-    maxFileSize: 104857600, // 100MB
+    chunkSize: 6000000, 
 }, (error, result) => { 
-    if (error) {
-        alert("Upload Error: " + error.message);
-    }
-    
     if (!error && result && result.event === "success") { 
-        // Video is now on Cloudinary! 
         uploadedVideoUrl = result.info.secure_url;
-        $("selected-file-name").textContent = "Video Uploaded Successfully!";
-        $("finalSubmitBtn").disabled = false;
-        $("uploadOverlay").classList.remove("active");
+        document.getElementById("selected-file-name").textContent = "Video Uploaded Successfully!";
+        document.getElementById("finalSubmitBtn").disabled = false;
     }
 });
 
-// Open widget when clicking 'Select Video'
-$("upload_widget_opener").addEventListener("click", () => {
-    myWidget.open();
-}, false);
-
-// 3. Final Submit: Tell Django to save the URL to the database
-$("finalSubmitBtn").onclick = async function() {
-    const title = $("id_title").value.trim();
-    if (!title) {
-        alert("Please enter a title.");
-        return;
-    }
-
-    $("uploadOverlay").classList.add("active");
-    $("uploadStatus").textContent = "Saving to VellaVision...";
-
+document.getElementById("finalSubmitBtn").onclick = async function() {
+    // Show loading state
+    document.getElementById("uploadOverlay").classList.add("active");
+    
     try {
+        // IMPORTANT: Use the correct URL for your 'video_upload' view
         const res = await fetch("{% url 'videos:upload' %}", {
             method: "POST",
             headers: {
@@ -112,22 +90,24 @@ $("finalSubmitBtn").onclick = async function() {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: new URLSearchParams({
-                'title': title,
-                'description': $("id_description").value,
-                'video_url': uploadedVideoUrl
+                'title': document.getElementById('id_title').value,
+                'description': document.getElementById('id_description').value,
+                'video_url': uploadedVideoUrl // The URL from Cloudinary
             })
         });
         
         const data = await res.json();
         if (data.success) {
-            location.href = `/${data.video_id}/`;
+            window.location.href = `/${data.video_id}/`;
         } else {
             alert("Database Error: " + data.error);
         }
     } catch (err) {
-        alert("Connection Error. Please check your internet.");
+        // This is what triggered your error screenshot
+        console.error(err);
+        alert("Server failed to respond. Check if your Railway server is running.");
     } finally {
-        $("uploadOverlay").classList.remove("active");
+        document.getElementById("uploadOverlay").classList.remove("active");
     }
 };
 </script>
