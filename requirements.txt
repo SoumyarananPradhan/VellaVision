@@ -20,5 +20,5 @@ tzdata==2025.3
 dj-database-url
 psycopg2-binary
 django-imagekit==5.0.0
-pillow==10.2.0
+pillow>=11.0.0
 gunicorn==20.1.0
