@@ -42,20 +42,51 @@ class Video(models.Model):
                 return self.video_file.url
             return ""
 
+
+
+
         @property
         def display_thumbnail_url(self):
+        # 1. Manual override check
+            if self.thumbnail:
+                return self.thumbnail.url
+    
+        # 2. Dynamic Fallback Generation
+            if self.video_file:
+                try:
+                    # FIX: Index [0] ensures we get the string "videos/filename" not a list
+                    public_id = self.video_file.name.rsplit('.', 1)[0]
+                    
+                    url, _ = utils.cloudinary_url(
+                        public_id,
+                        resource_type="video",
+                        format="jpg",
+                        transformation=[
+                            {'so': '1'}, # Start Offset: Capture frame at 1 second
+                            {'width': 480, 'crop': "scale", 'quality': "auto"}
+                        ]
+                    )
+                    return url
+                except Exception as e:
+                    # Log the error in production logs for observability
+                    print(f"Thumbnail generation error: {e}")
+                    return "/static/images/default_video_icon.png"
+            
+            return "/static/images/default_video_icon.png"
+        # @property
+        # def display_thumbnail_url(self):
 
-        # """
-        # Generate thumbnail automatically from Cloudinary video
-        # """
-            if not self.video_url:
-                return ""
+        # # """
+        # # Generate thumbnail automatically from Cloudinary video
+        # # """
+        #     if not self.video_url:
+        #         return ""
 
-            # Convert video URL to thumbnail URL
-            return self.video_url.replace(
-                "/video/upload/",
-                "/video/upload/so_0/"
-            ).rsplit(".", 1)[0] + ".jpg"
+        #     # Convert video URL to thumbnail URL
+        #     return self.video_url.replace(
+        #         "/video/upload/",
+        #         "/video/upload/so_0/"
+        #     ).rsplit(".", 1)[0] + ".jpg"
             # 1. Check for manual thumbnail first
             # if self.thumbnail:
             #     return self.thumbnail.url
