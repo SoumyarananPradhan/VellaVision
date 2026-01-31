@@ -4,8 +4,6 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.core.files.base import ContentFile
 import base64
-import io
-from PIL import Image  # Required for manual validation
 from .models import Video, VideoLike
 from .forms import VideoUploadForm
 
@@ -36,7 +34,7 @@ def video_upload(request):
     form = VideoUploadForm(request.POST, request.FILES)
     if form.is_valid():
         try:
-            # 1. Create the video object (but don't save to DB yet)
+            # 1. Prepare the Video Object
             video = Video(
                 user=request.user,
                 title=form.cleaned_data['title'],
@@ -44,46 +42,41 @@ def video_upload(request):
                 video_file=request.FILES['video_file']
             )
 
-            # 2. STRICT Thumbnail Validation
-            # We verify the image HERE so it doesn't crash the .save() later
+            # 2. Try to add the Thumbnail
             custom_thumbnail = request.POST.get("thumbnail_data", "")
             if custom_thumbnail and custom_thumbnail.startswith("data:image"):
                 try:
                     format, imgstr = custom_thumbnail.split(';base64,')
                     ext = format.split('/')[-1]
-                    if imgstr:
-                        # Decode the bytes
-                        image_data = base64.b64decode(imgstr)
-                        
-                        # Verify with Pillow: Is this actually an image?
-                        try:
-                            image = Image.open(io.BytesIO(image_data))
-                            image.verify()  # This crashes if the file is "Invalid"
-                            
-                            # If we survived verify(), it's safe to use
-                            data = ContentFile(image_data, name=f'{video.title}_thumb.{ext}')
-                            video.thumbnail = data
-                        except Exception:
-                            print("Thumbnail was invalid image data. Skipping.")
-                            # We deliberately do nothing, so video.thumbnail stays None
-                            
+                    data = ContentFile(base64.b64decode(imgstr), name=f'{video.title}_thumb.{ext}')
+                    video.thumbnail = data
                 except Exception as e:
-                    print(f"Thumbnail error: {e}")
+                    print(f"Thumbnail processing failed: {e}")
+                    # We continue, video.thumbnail will just be empty
 
-            # 3. Save triggers the Cloudinary upload
-            # Since we filtered out bad images above, this will now succeed!
-            video.save()
+            # 3. SAVE TO DATABASE (The Dangerous Part)
+            try:
+                video.save()
+            except Exception as e:
+                error_msg = str(e).lower()
+                # If the error is about the image, drop the thumbnail and retry
+                if "invalid image" in error_msg or "upload error" in error_msg:
+                    print(f"Thumbnail crashed the upload. Retrying without thumbnail. Error: {e}")
+                    video.thumbnail = None  # Remove the bad image
+                    video.save()            # Save just the video
+                else:
+                    raise e  # If it's another error (like Database down), crash normally
 
             return JsonResponse({
                 "success": True,
                 "video_id": video.id,
                 "message": "Video uploaded successfully"
             })
+
         except Exception as e:
-            # This catches authentic Cloudinary/DB errors
             return JsonResponse({"success": False, "error": f"Upload Error: {str(e)}"})
 
-    # Form validation errors
+    # Form Validation Errors
     errors = []
     for field, field_errors in form.errors.items():
         for error in field_errors:
