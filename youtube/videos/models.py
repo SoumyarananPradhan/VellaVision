@@ -29,33 +29,32 @@ class Video(models.Model):
         return self.title
 
     # Compatibility properties for your templates
+    class Video(models.Model):
+    # ... your fields (title, video_file, etc.) are here ...
+    # They should all have 4 spaces of indentation.
+
+    def __str__(self):
+        return self.title
+
     @property
     def video_url(self):
         if self.video_file:
             return self.video_file.url
         return ""
 
-
-
     @property
-    def display_thumbnail_url(self):
+    def display_thumbnail_url(self): # <--- LINE 41: Ensure this has 4 spaces!
         if self.thumbnail:
             return self.thumbnail.url
-    
+        
         if self.video_file:
             try:
-            # We strip the extension to get the 'Public ID' Cloudinary needs
-            # Example: 'videos/beach_video.mp4' -> 'videos/beach_video'
                 public_id = self.video_file.name.rsplit('.', 1)[0]
-            
                 url, options = utils.cloudinary_url(
                     public_id,
                     resource_type="video",
                     format="jpg",
-                    frame="1",
-                    transformation=[
-                        {'width': 400, 'crop': "fill", 'aspect_ratio': "16:9"}
-                    ]
+                    frame="1"
                 )
                 return url
             except Exception:
