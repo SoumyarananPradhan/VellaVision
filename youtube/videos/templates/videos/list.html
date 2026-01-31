@@ -8,33 +8,6 @@ Videos - VellaVision
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/videos.css' %}">
-<style>
-    /* Additional styles for thumbnail handling */
-    .video-thumbnail img {
-        min-height: 200px;
-        background-color: #1a1a1a;
-        object-fit: cover;
-    }
-    
-    .video-thumbnail img.error {
-        display: none;
-    }
-    
-    .video-thumbnail .thumbnail-placeholder {
-        display: none;
-        width: 100%;
-        height: 200px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        align-items: center;
-        justify-content: center;
-        font-size: 48px;
-        color: white;
-    }
-    
-    .video-thumbnail.has-error .thumbnail-placeholder {
-        display: flex;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -42,26 +15,8 @@ Videos - VellaVision
 <div class="video-grid">
     {% for video in videos %}
         <a href="{% url 'videos:detail' video.id %}" class="video-card">
-            <div class="video-thumbnail" id="thumbnail-{{ video.id }}">
-                {% if video.display_thumbnail_url %}
-                    <img 
-                        src="{{ video.display_thumbnail_url }}" 
-                        alt="{{ video.title }}"
-                        onerror="handleThumbnailError(this, '{{ video.id }}')"
-                        onload="handleThumbnailSuccess(this)"
-                    >
-                {% else %}
-                    <img 
-                        src="{% static 'images/placeholder.png' %}" 
-                        alt="{{ video.title }}"
-                        onerror="handleThumbnailError(this, '{{ video.id }}')"
-                    >
-                {% endif %}
-                
-                <!-- Fallback placeholder -->
-                <div class="thumbnail-placeholder">
-                    🎥
-                </div>
+            <div class="video-thumbnail">
+                <img src="{{ video.display_thumbnail_url|default:'/static/images/placeholder.png' }}" alt="{{ video.title }}">
                 
                 <span class="play-icon">▶</span>
             </div>
@@ -71,37 +26,6 @@ Videos - VellaVision
             </div>
         </a>
     {% endfor %}
-</div>
-
-<script>
-function handleThumbnailError(img, videoId) {
-    console.error(`Thumbnail failed to load for video ${videoId}:`, img.src);
-    img.classList.add('error');
-    const container = document.getElementById(`thumbnail-${videoId}`);
-    if (container) {
-        container.classList.add('has-error');
-    }
-}
-
-function handleThumbnailSuccess(img) {
-    console.log('Thumbnail loaded successfully:', img.src);
-}
-
-// Debug: Log all thumbnail URLs on page load
-document.addEventListener('DOMContentLoaded', function() {
-    const thumbnails = document.querySelectorAll('.video-thumbnail img');
-    console.log('=== THUMBNAIL DEBUG INFO ===');
-    console.log(`Total videos: ${thumbnails.length}`);
-    thumbnails.forEach((img, index) => {
-        console.log(`Video ${index + 1} thumbnail URL:`, img.src);
-    });
-});
-</script>
-
-{% else %}
-<div style="text-align: center; padding: 50px; color: #999;">
-    <p>No videos uploaded yet. Be the first to share!</p>
-    <a href="{% url 'videos:upload' %}" style="color: #667eea; text-decoration: none;">Upload Video</a>
 </div>
 {% endif %}
 {% endblock %}

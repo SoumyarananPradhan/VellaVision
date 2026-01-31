@@ -3,23 +3,16 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 from cloudinary_storage.validators import validate_video
 from cloudinary_storage.storage import VideoMediaCloudinaryStorage
-from cloudinary import CloudinaryImage
-import re
-
+from cloudinary import utils
 
 class Video(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="videos")
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
 
-    # Video file stored in Cloudinary
-    video_file = models.FileField(
-        upload_to='videos/',
-        storage=VideoMediaCloudinaryStorage(),
-        validators=[validate_video]
-    )
-    
-    # Optional manual thumbnail upload
+    # We use FileField now. Cloudinary handles the storage automatically.
+    video_file = models.FileField(upload_to='videos/',storage=VideoMediaCloudinaryStorage(),
+        validators=[validate_video])
     thumbnail = models.ImageField(upload_to='thumbnails/', blank=True, null=True)
 
     views = models.PositiveIntegerField(default=0)
@@ -35,62 +28,59 @@ class Video(models.Model):
     def __str__(self):
         return self.title
 
-    @property
-    def video_url(self):
-        """Returns the full Cloudinary video URL"""
-        if self.video_file:
-            try:
+    # Compatibility properties for your templates
+    class Video(models.Model):
+    # ... your fields (title, video_file, etc.) are here ...
+    # They should all have 4 spaces of indentation.
+
+        def __str__(self):
+            return self.title
+
+        @property
+        def video_url(self):
+            if self.video_file:
                 return self.video_file.url
-            except Exception:
-                return ""
-        return ""
+            return ""
 
-    @property
-    def display_thumbnail_url(self):
-        """
-        Returns thumbnail URL with intelligent fallback:
-        1. Manual thumbnail (if uploaded)
-        2. Auto-generated from Cloudinary video (first frame)
-        3. Empty string (template will use placeholder)
-        """
-        # Priority 1: Manual thumbnail
-        if self.thumbnail:
-            try:
-                return self.thumbnail.url
-            except Exception:
-                pass
-        
-        # Priority 2: Generate from Cloudinary video
-        if self.video_file:
-            try:
-                # Extract the public_id from the video file path
-                # Example: videos/sample.mp4 -> videos/sample
-                public_id = self.video_file.name
-                
-                # Remove file extension if present
-                if '.' in public_id:
-                    public_id = public_id.rsplit('.', 1)[0]
-                
-                # Generate thumbnail URL using Cloudinary transformation
-                # This creates a JPG thumbnail from the first frame (so_0)
-                cloudinary_obj = CloudinaryImage(public_id, resource_type='video')
-                thumbnail_url = cloudinary_obj.build_url(
-                    transformation=[
-                        {'start_offset': '0'},  # First frame
-                        {'width': 640, 'height': 360, 'crop': 'fill'},  # Resize
-                        {'quality': 'auto'},  # Auto quality
-                        {'format': 'jpg'}  # Convert to JPG
-                    ]
-                )
-                return thumbnail_url
-                
-            except Exception as e:
-                # Log error for debugging
-                print(f"Thumbnail generation failed for video {self.id}: {str(e)}")
-                return ""
-        
-        return ""
+        @property
+        def display_thumbnail_url(self):
 
+        # """
+        # Generate thumbnail automatically from Cloudinary video
+        # """
+            if not self.video_url:
+                return ""
+
+            # Convert video URL to thumbnail URL
+            return self.video_url.replace(
+                "/video/upload/",
+                "/video/upload/so_0/"
+            ).rsplit(".", 1)[0] + ".jpg"
+            # 1. Check for manual thumbnail first
+            # if self.thumbnail:
+            #     return self.thumbnail.url
+            
+            # 2. If missing, generate one from the video automatically
+            # This prevents the "AttributeError" on your listing page
+            # if self.video_file:
+            #     try:
+            #         url, options = utils.cloudinary_url(
+            #             self.video_file.name,
+            #             resource_type="video",
+            #             format="jpg",
+            #             frame="1"
+            #         )
+            #         return url
+            #     except Exception:
+            #         return "" # Fallback to empty if Cloudinary fails
+            # return ""
+
+
+        # @property
+        # def display_thumbnail_url(self):
+        #     if self.thumbnail:
+        #         return self.thumbnail.url
+        #     return ""
 
 class VideoLike(models.Model):
     LIKE = 1
@@ -111,3 +101,79 @@ class VideoLike(models.Model):
     def __str__(self):
         action = "liked" if self.value == self.LIKE else "disliked"
         return f"{self.user.username} {action} {self.video.title}"
+
+
+# Old code for reference (commented out)
+# from django.db import models
+# from django.contrib.auth.models import User
+# from .imagekit_client import (
+#     get_optimized_video_url, get_streaming_url, get_thumbnail_url, add_image_watermark
+# )
+
+
+# class Video(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="videos")
+#     title = models.CharField(max_length=120)
+#     description = models.TextField(blank=True)
+
+#     file_id = models.CharField(max_length=200)
+#     video_url = models.URLField(max_length=500)
+#     thumbnail_url = models.URLField(max_length=500, blank=True)
+
+#     views = models.PositiveIntegerField(default=0)
+#     likes = models.PositiveIntegerField(default=0)
+#     dislikes = models.PositiveIntegerField(default=0)
+
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#     upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+#     class Meta:
+#         ordering = ["-created_at"]
+
+#     def __str__(self):
+#         return self.title
+
+#     @property
+#     def display_thumbnail_url(self):
+#         if self.thumbnail_url and "/thumbnails/" in self.thumbnail_url:
+#             return add_image_watermark(self.thumbnail_url, self.user.username)
+#         return self.generated_thumbnail_url
+
+#     @property
+#     def generated_thumbnail_url(self):
+#         if not self.video_url:
+#             return ""
+#         return get_thumbnail_url(self.video_url, self.user.username)
+
+#     @property
+#     def streaming_url(self):
+#         if not self.video_url:
+#             return ""
+#         return get_streaming_url(self.video_url)
+
+#     @property
+#     def optimized_url(self):
+#         if not self.video_url:
+#             return ""
+#         return get_optimized_video_url(self.video_url)
+
+
+# class VideoLike(models.Model):
+#     LIKE = 1
+#     DISLIKE = -1
+#     LIKE_CHOICES = [
+#         (LIKE, "Like"),
+#         (DISLIKE, "Dislike")
+#     ]
+
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="user_likes")
+#     value = models.SmallIntegerField(choices=LIKE_CHOICES)
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     class Meta:
+#         unique_together = ["user", "video"]
+
+#     def __str__(self):
+#         action = "liked" if self.value == self.LIKE else "disliked"
+#         return f"{self.user.username} {action} {self.video.title}"
