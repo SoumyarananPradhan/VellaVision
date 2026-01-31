@@ -27,4 +27,3 @@ typing-inspection==0.4.2
 tzdata==2025.3
 urllib3==2.6.3
 python-magic
-gunicorn>=21.2.0
