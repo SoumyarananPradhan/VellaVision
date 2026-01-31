@@ -39,66 +39,94 @@ def channel_videos(request, username):
 def video_upload_page(request):
     return render(request, "videos/upload.html", {"form": VideoUploadForm()})
 
-
-# --- ACTION VIEWS (Upload, Delete, Vote) ---
-
 @login_required
 @require_POST
 def video_upload(request):
-    form = VideoUploadForm(request.POST, request.FILES)
-    if form.is_valid():
-        try:
-            # --- STEP 1: SAVE VIDEO FIRST (Safe Mode) ---
-            # We strictly set thumbnail=None here. 
-            # This ensures the video uploads to Cloudinary successfully,
-            # even if the thumbnail is broken/invalid.
-            video = Video(
-                user=request.user,
-                title=form.cleaned_data['title'],
-                description=form.cleaned_data['description'],
-                video_file=request.FILES['video_file'],
-                thumbnail=None 
-            )
-            video.save()  # <--- Video is now safe in Cloudinary!
+    # We are getting the data from the JavaScript 'fetch' call
+    title = request.POST.get('title')
+    description = request.POST.get('description')
+    video_url = request.POST.get('video_url') # This is the URL from Cloudinary
 
-            # --- STEP 2: HANDLE THUMBNAIL SEPARATELY ---
-            # Now we try to process the base64 thumbnail.
-            # If this crashes (Invalid Image), we catch the error and IGNORE it.
-            custom_thumbnail = request.POST.get("thumbnail_data", "")
+    if not title or not video_url:
+        return JsonResponse({"success": False, "error": "Title and Video are required."})
+
+    try:
+        # Create the video entry in the database
+        video = Video.objects.create(
+            user=request.user,
+            title=title,
+            description=description,
+            video_file=video_url # Django saves the link directly to Cloudinary
+        )
+        
+        return JsonResponse({
+            "success": True, 
+            "video_id": video.id,
+            "message": "Video metadata saved successfully!"
+        })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
+# --- ACTION VIEWS (Upload, Delete, Vote) ---
+# we use this function if required to upload videos in two steps
+# @login_required
+# @require_POST
+# def video_upload(request):
+#     form = VideoUploadForm(request.POST, request.FILES)
+#     if form.is_valid():
+#         try:
+#             # --- STEP 1: SAVE VIDEO FIRST (Safe Mode) ---
+#             # We strictly set thumbnail=None here. 
+#             # This ensures the video uploads to Cloudinary successfully,
+#             # even if the thumbnail is broken/invalid.
+#             video = Video(
+#                 user=request.user,
+#                 title=form.cleaned_data['title'],
+#                 description=form.cleaned_data['description'],
+#                 video_file=request.FILES['video_file'],
+#                 thumbnail=None 
+#             )
+#             video.save()  # <--- Video is now safe in Cloudinary!
+
+#             # --- STEP 2: HANDLE THUMBNAIL SEPARATELY ---
+#             # Now we try to process the base64 thumbnail.
+#             # If this crashes (Invalid Image), we catch the error and IGNORE it.
+#             custom_thumbnail = request.POST.get("thumbnail_data", "")
             
-            if custom_thumbnail and custom_thumbnail.startswith("data:image"):
-                try:
-                    format, imgstr = custom_thumbnail.split(';base64,')
-                    ext = format.split('/')[-1]
+#             if custom_thumbnail and custom_thumbnail.startswith("data:image"):
+#                 try:
+#                     format, imgstr = custom_thumbnail.split(';base64,')
+#                     ext = format.split('/')[-1]
                     
-                    # Create the file object
-                    data = ContentFile(base64.b64decode(imgstr), name=f'{video.title}_thumb.{ext}')
+#                     # Create the file object
+#                     data = ContentFile(base64.b64decode(imgstr), name=f'{video.title}_thumb.{ext}')
                     
-                    # Save it to the video
-                    video.thumbnail = data
-                    video.save()
+#                     # Save it to the video
+#                     video.thumbnail = data
+#                     video.save()
                     
-                except Exception as e:
-                    # LOGIC: If thumbnail fails, we just print the error.
-                    # We do NOT return an error to the user, because the video is already safe.
-                    print(f"Thumbnail upload failed (Skipping): {e}")
+#                 except Exception as e:
+#                     # LOGIC: If thumbnail fails, we just print the error.
+#                     # We do NOT return an error to the user, because the video is already safe.
+#                     print(f"Thumbnail upload failed (Skipping): {e}")
 
-            return JsonResponse({
-                "success": True,
-                "video_id": video.id,
-                "message": "Video uploaded successfully"
-            })
+#             return JsonResponse({
+#                 "success": True,
+#                 "video_id": video.id,
+#                 "message": "Video uploaded successfully"
+#             })
 
-        except Exception as e:
-            # Only real video upload errors will be caught here
-            return JsonResponse({"success": False, "error": f"Upload Error: {str(e)}"})
+#         except Exception as e:
+#             # Only real video upload errors will be caught here
+#             return JsonResponse({"success": False, "error": f"Upload Error: {str(e)}"})
 
-    # Form Validation Errors
-    errors = []
-    for field, field_errors in form.errors.items():
-        for error in field_errors:
-            errors.append(f"{field}: {error}" if field != "__all__" else error)
-    return JsonResponse({"success": False, "errors": ";".join(errors)})
+#     # Form Validation Errors
+#     errors = []
+#     for field, field_errors in form.errors.items():
+#         for error in field_errors:
+#             errors.append(f"{field}: {error}" if field != "__all__" else error)
+#     return JsonResponse({"success": False, "errors": ";".join(errors)})
 
 
 @login_required
