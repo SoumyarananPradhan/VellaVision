@@ -42,34 +42,38 @@ class Video(models.Model):
                 return self.video_file.url
             return ""
 
-
-
-
         @property
         def display_thumbnail_url(self):
             if self.thumbnail:
                 return self.thumbnail.url
-            
-            if self.video_file:
-                try:
-                    # 1. Extract the clean Public ID (strip extension)
-                    # 'videos/my_video.mp4' -> 'videos/my_video'
-                    public_id = self.video_file.name.rsplit('.', 1)[0]
-                    
-                    # 2. Build the precise transformation URL
-                    url, _ = utils.cloudinary_url(
-                        public_id,
-                        resource_type="video", # MANDATORY for video sources
-                        format="jpg",          # Convert frame to JPG
-                        transformation=[
-                            {'so': '1'},       # Start Offset: Capture at 1 second mark
-                            {'width': 400, 'crop': "fill", 'aspect_ratio': "16:9"}
-                        ]
-                    )
-                    return url
-                except Exception as e:
-                    return "/static/images/default_thumb.png"
             return "/static/images/default_thumb.png"
+
+
+        # @property
+        # def display_thumbnail_url(self):
+        #     if self.thumbnail:
+        #         return self.thumbnail.url
+            
+        #     if self.video_file:
+        #         try:
+        #             # 1. Extract the clean Public ID (strip extension)
+        #             # 'videos/my_video.mp4' -> 'videos/my_video'
+        #             public_id = self.video_file.name.rsplit('.', 1)[0]
+                    
+        #             # 2. Build the precise transformation URL
+        #             url, _ = utils.cloudinary_url(
+        #                 public_id,
+        #                 resource_type="video", # MANDATORY for video sources
+        #                 format="jpg",          # Convert frame to JPG
+        #                 transformation=[
+        #                     {'so': '1'},       # Start Offset: Capture at 1 second mark
+        #                     {'width': 400, 'crop': "fill", 'aspect_ratio': "16:9"}
+        #                 ]
+        #             )
+        #             return url
+        #         except Exception as e:
+        #             return "/static/images/default_thumb.png"
+        #     return "/static/images/default_thumb.png"
         # @property
         # def display_thumbnail_url(self):
 
