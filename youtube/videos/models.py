@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 from cloudinary_storage.validators import validate_video
 from cloudinary_storage.storage import VideoMediaCloudinaryStorage
+from cloudinary import utils
 
 class Video(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="videos")
@@ -34,11 +35,34 @@ class Video(models.Model):
             return self.video_file.url
         return ""
 
+
     @property
     def display_thumbnail_url(self):
+        # 1. Check for manual thumbnail first
         if self.thumbnail:
             return self.thumbnail.url
+        
+        # 2. If missing, generate one from the video automatically
+        # This prevents the "AttributeError" on your listing page
+        if self.video_file:
+            try:
+                url, options = utils.cloudinary_url(
+                    self.video_file.name,
+                    resource_type="video",
+                    format="jpg",
+                    frame="1"
+                )
+                return url
+            except Exception:
+                return "" # Fallback to empty if Cloudinary fails
         return ""
+
+        
+    # @property
+    # def display_thumbnail_url(self):
+    #     if self.thumbnail:
+    #         return self.thumbnail.url
+    #     return ""
 
 class VideoLike(models.Model):
     LIKE = 1

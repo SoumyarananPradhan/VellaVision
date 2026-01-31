@@ -80,6 +80,91 @@
 <script>
 const $ = id => document.getElementById(id);
 
+// Update Video Label
+$("id_video_file").onchange = e => {
+    const file = e.target.files[0];
+    $("video-label").textContent = file ? `${file.name}` : "Click to select a video file";
+};
+
+// Handle Thumbnail Preview
+$("customThumbnail").onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        $("thumbPreview").src = ev.target.result;
+        $("thumbPreview").classList.add("visible");
+        $("thumb-label").style.display = "none";
+        $("thumbnailData").value = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+// Handle Form Submission with Progress Tracking
+$("uploadForm").onsubmit = function(e) {
+    e.preventDefault();
+
+    if (!$("id_video_file").files.length || !$("id_title").value.trim()) {
+        alert("Please select a video and enter a title.");
+        return;
+    }
+
+    // Show the overlay
+    $("uploadOverlay").classList.add("active");
+    $("submitBtn").disabled = true;
+    $("errorContainer").innerHTML = "";
+    
+    // Prevent the user from accidentally closing the tab
+    window.onbeforeunload = () => "Upload in progress, stay on this page!";
+
+    const formData = new FormData(this);
+    const xhr = new XMLHttpRequest();
+
+    // --- PROGRESS TRACKER ---
+    xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            $("uploadStatus").textContent = `Uploading: ${percent}%`;
+        }
+    });
+
+    // --- HANDLE RESPONSE ---
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            window.onbeforeunload = null;
+            try {
+                const data = JSON.parse(xhr.responseText);
+                if (data.success) {
+                    $("uploadStatus").textContent = "Success! Processing...";
+                    setTimeout(() => location.href = '{% url "videos:list" %}', 1000);
+                } else {
+                    handleError(data.error || data.errors || "Upload failed");
+                }
+            } catch (err) {
+                handleError("Server error. The file might be too large for your internet speed.");
+            }
+        }
+    };
+
+    function handleError(message) {
+        $("uploadOverlay").classList.remove("active");
+        $("submitBtn").disabled = false;
+        $("errorContainer").innerHTML = `<ul class="error-list"><li>${message}</li></ul>`;
+    }
+
+    // Open and send the request
+    xhr.open("POST", "{% url 'videos:upload' %}", true);
+    xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+    xhr.send(formData);
+};
+</script>
+{% endblock %}
+
+{% comment %} commented for future references {% endcomment %}
+{% comment %} {% block extra_js %}
+<script>
+const $ = id => document.getElementById(id);
+
 $("id_video_file").onchange = e => {
     const file = e.target.files[0]
     $("video-label").textContent = file ? `${file.name}` : "Click to select a video file"
@@ -131,4 +216,4 @@ $("uploadForm").onsubmit = async e => {
 }
 
 </script>
-{% endblock %}
+{% endblock %} {% endcomment %}

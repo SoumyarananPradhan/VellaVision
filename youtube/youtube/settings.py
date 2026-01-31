@@ -156,3 +156,8 @@ STORAGES = {
 
 # Keep media URL as is (Cloudinary handles the rest)
 MEDIA_URL = '/media/'
+
+
+# Set to 200MB (200 * 1024 * 1024)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 209715200
+FILE_UPLOAD_MAX_MEMORY_SIZE = 209715200
