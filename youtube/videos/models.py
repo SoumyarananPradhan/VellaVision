@@ -44,24 +44,36 @@ class Video(models.Model):
 
         @property
         def display_thumbnail_url(self):
+
+        # """
+        # Generate thumbnail automatically from Cloudinary video
+        # """
+            if not self.video_url:
+                return ""
+
+            # Convert video URL to thumbnail URL
+            return self.video_url.replace(
+                "/video/upload/",
+                "/video/upload/so_0/"
+            ).rsplit(".", 1)[0] + ".jpg"
             # 1. Check for manual thumbnail first
-            if self.thumbnail:
-                return self.thumbnail.url
+            # if self.thumbnail:
+            #     return self.thumbnail.url
             
             # 2. If missing, generate one from the video automatically
             # This prevents the "AttributeError" on your listing page
-            if self.video_file:
-                try:
-                    url, options = utils.cloudinary_url(
-                        self.video_file.name,
-                        resource_type="video",
-                        format="jpg",
-                        frame="1"
-                    )
-                    return url
-                except Exception:
-                    return "" # Fallback to empty if Cloudinary fails
-            return ""
+            # if self.video_file:
+            #     try:
+            #         url, options = utils.cloudinary_url(
+            #             self.video_file.name,
+            #             resource_type="video",
+            #             format="jpg",
+            #             frame="1"
+            #         )
+            #         return url
+            #     except Exception:
+            #         return "" # Fallback to empty if Cloudinary fails
+            # return ""
 
 
         # @property

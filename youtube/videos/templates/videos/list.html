@@ -16,7 +16,8 @@ Videos - VellaVision
     {% for video in videos %}
         <a href="{% url 'videos:detail' video.id %}" class="video-card">
             <div class="video-thumbnail">
-                <img src="{{ video.display_thumbnail_url }}" alt="{{ video.title }}" loading="lazy">
+                <img src="{{ video.display_thumbnail_url|default:'/static/images/placeholder.png' }}" alt="{{ video.title }}">
+                
                 <span class="play-icon">▶</span>
             </div>
             <div class="video-info">
