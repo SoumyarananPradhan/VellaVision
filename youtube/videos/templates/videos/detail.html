@@ -13,7 +13,12 @@
 
 <div class="video-player-container">
     <div class="video-player">
-        {% cloudinary video.video_file.name resource_type="video" controls=True width="100%" height="auto" class="video-player" %}
+        
+        <video id="video-player" controls autoplay width="100%" class="video-player" poster="{{ video.thumbnail.url }}">
+            <source src="{% cloudinary_url video.video_file.name resource_type='video' %}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+
     </div>
 
     <div class="video-details">
@@ -51,8 +56,7 @@
 
 {% block extra_js %}
 <script>
-// 3. CLEAN JS: We removed the broken HLS player logic.
-// We only keep the Vote and Delete logic which works perfectly.
+// Simple Vote and Delete Logic (No complex player JS needed)
 
 const csrf = '{{ csrf_token }}'
 
@@ -69,7 +73,7 @@ function deleteVideo(videoId) {
 
 function vote(videoId, voteType) {
     {% if not user.is_authenticated %}
-    window.location.href = '{% url "accounts:login" %}'  // Fixed small typo in URL
+    window.location.href = '{% url "accounts:login" %}'
     return
     {% endif %}
 
