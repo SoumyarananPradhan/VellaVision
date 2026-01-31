@@ -1,3 +1,4 @@
+# youtube/videos/management/commands/generate_thumbnails.py
 from django.core.management.base import BaseCommand
 from videos.models import Video
 from cloudinary.utils import cloudinary_url
@@ -20,7 +21,7 @@ class Command(BaseCommand):
                 continue
 
             try:
-                # Use full public ID including folder, strip extension
+                # Full public ID (keep folder, strip extension)
                 public_id = video.video_file.name.rsplit('.', 1)[0]
 
                 # Build Cloudinary thumbnail URL
@@ -36,20 +37,19 @@ class Command(BaseCommand):
 
                 self.stdout.write(f"Generated thumbnail URL for {video.title}: {thumb_url}")
 
-                # Download thumbnail
+                # Try fetching the frame
                 response = requests.get(thumb_url)
                 if response.status_code == 200:
                     with tempfile.NamedTemporaryFile(delete=True) as tmp:
                         tmp.write(response.content)
                         tmp.flush()
-                        # Upload thumbnail to Cloudinary as an image
                         uploaded = upload(tmp.name, folder="thumbnails/")
                         video.thumbnail = uploaded["secure_url"]
                         video.save(update_fields=["thumbnail"])
                         self.stdout.write(self.style.SUCCESS(f"Thumbnail saved for {video.title}"))
                 else:
                     self.stdout.write(self.style.ERROR(
-                        f"Failed to fetch thumbnail for {video.title} — status code {response.status_code}"
+                        f"Failed to fetch thumbnail for {video.title} — status {response.status_code}"
                     ))
 
             except Exception as e:
