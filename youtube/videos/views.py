@@ -1,5 +1,4 @@
-# ... (imports stay the same) ...
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -8,27 +7,40 @@ import base64
 from .models import Video, VideoLike
 from .forms import VideoUploadForm
 
-# ... (keep video_detail, video_list, channel_videos functions as they are) ...
-# OR just copy-paste this whole file content below:
+# --- READ ONLY VIEWS ---
 
 def video_detail(request, video_id):
     video = get_object_or_404(Video, id=video_id)
+    
+    # Increment view count
     video.views += 1
     video.save(update_fields=["views"])
+
     user_vote = None
     if request.user.is_authenticated:
         like = VideoLike.objects.filter(user=request.user, video=video).first()
         if like:
             user_vote = like.value
+
     return render(request, "videos/detail.html", {"video": video, "user_vote": user_vote})
 
+
 def video_list(request):
-    videos = Video.objects.all()
+    videos = Video.objects.all().order_by('-created_at')
     return render(request, 'videos/list.html', {"videos": videos})
 
+
 def channel_videos(request, username):
-    videos = Video.objects.filter(user__username=username)
+    videos = Video.objects.filter(user__username=username).order_by('-created_at')
     return render(request, "videos/channel.html", {"videos": videos, "channel_name": username})
+
+
+@login_required
+def video_upload_page(request):
+    return render(request, "videos/upload.html", {"form": VideoUploadForm()})
+
+
+# --- ACTION VIEWS (Upload, Delete, Vote) ---
 
 @login_required
 @require_POST
@@ -36,43 +48,40 @@ def video_upload(request):
     form = VideoUploadForm(request.POST, request.FILES)
     if form.is_valid():
         try:
-            # 1. Prepare the Video Object
+            # --- STEP 1: SAVE VIDEO FIRST (Safe Mode) ---
+            # We strictly set thumbnail=None here. 
+            # This ensures the video uploads to Cloudinary successfully,
+            # even if the thumbnail is broken/invalid.
             video = Video(
                 user=request.user,
                 title=form.cleaned_data['title'],
                 description=form.cleaned_data['description'],
-                video_file=request.FILES['video_file']
+                video_file=request.FILES['video_file'],
+                thumbnail=None 
             )
+            video.save()  # <--- Video is now safe in Cloudinary!
 
-            # 2. Try to add the Thumbnail
+            # --- STEP 2: HANDLE THUMBNAIL SEPARATELY ---
+            # Now we try to process the base64 thumbnail.
+            # If this crashes (Invalid Image), we catch the error and IGNORE it.
             custom_thumbnail = request.POST.get("thumbnail_data", "")
+            
             if custom_thumbnail and custom_thumbnail.startswith("data:image"):
                 try:
                     format, imgstr = custom_thumbnail.split(';base64,')
                     ext = format.split('/')[-1]
+                    
+                    # Create the file object
                     data = ContentFile(base64.b64decode(imgstr), name=f'{video.title}_thumb.{ext}')
+                    
+                    # Save it to the video
                     video.thumbnail = data
+                    video.save()
+                    
                 except Exception as e:
-                    print(f"Thumbnail processing failed: {e}")
-
-            # 3. SAVE TO DATABASE (With Rewind Fix)
-            try:
-                video.save()
-            except Exception as e:
-                error_msg = str(e).lower()
-                # If it's an image/empty file error, it means the first attempt failed halfway
-                if "invalid image" in error_msg or "upload error" in error_msg or "empty file" in error_msg:
-                    print(f"Retry triggered! Rewinding video file. Original Error: {e}")
-                    
-                    video.thumbnail = None  # 1. Drop the bad thumbnail
-                    
-                    # 2. CRITICAL FIX: Rewind the video file to the start!
-                    if video.video_file:
-                        video.video_file.seek(0)
-
-                    video.save()            # 3. Try saving again
-                else:
-                    raise e  # Real error (like DB connection lost)
+                    # LOGIC: If thumbnail fails, we just print the error.
+                    # We do NOT return an error to the user, because the video is already safe.
+                    print(f"Thumbnail upload failed (Skipping): {e}")
 
             return JsonResponse({
                 "success": True,
@@ -81,38 +90,41 @@ def video_upload(request):
             })
 
         except Exception as e:
+            # Only real video upload errors will be caught here
             return JsonResponse({"success": False, "error": f"Upload Error: {str(e)}"})
 
+    # Form Validation Errors
     errors = []
     for field, field_errors in form.errors.items():
         for error in field_errors:
             errors.append(f"{field}: {error}" if field != "__all__" else error)
     return JsonResponse({"success": False, "errors": ";".join(errors)})
 
-@login_required
-def video_upload_page(request):
-    return render(request, "videos/upload.html", {"form": VideoUploadForm()})
 
 @login_required
 @require_POST
 def delete_video(request, video_id):
+    # Ensure user owns the video
     video = get_object_or_404(Video, id=video_id, user=request.user)
-    video.delete()
+    video.delete() # This triggers Cloudinary to delete the file too
     return JsonResponse({"success": True, "message": "video deleted"})
+
 
 @login_required
 @require_POST
 def video_vote(request, video_id):
     video = get_object_or_404(Video, id=video_id)
     vote_type = request.POST.get("vote")
+
     if vote_type not in ["like", "dislike"]:
         return JsonResponse({"success": False, "error": "Invalid vote"}, status=400)
-    
+
     value = VideoLike.LIKE if vote_type == "like" else VideoLike.DISLIKE
     existing_vote = VideoLike.objects.filter(user=request.user, video=video).first()
 
     if existing_vote:
         if existing_vote.value == value:
+            # Toggle off (User clicked the same button again)
             if value == VideoLike.LIKE:
                 video.likes = max(0, video.likes - 1)
             else:
@@ -120,6 +132,7 @@ def video_vote(request, video_id):
             existing_vote.delete()
             user_vote = None
         else:
+            # Switch vote (User clicked Like but had Dislike, or vice versa)
             if value == VideoLike.LIKE:
                 video.likes += 1
                 video.dislikes = max(0, video.dislikes - 1)
@@ -130,6 +143,7 @@ def video_vote(request, video_id):
             existing_vote.save()
             user_vote = value
     else:
+        # New vote
         VideoLike.objects.create(user=request.user, video=video, value=value)
         if value == VideoLike.LIKE:
             video.likes += 1
@@ -138,6 +152,7 @@ def video_vote(request, video_id):
         user_vote = value
 
     video.save(update_fields=["likes", "dislikes"])
+
     return JsonResponse({
         "likes": video.likes,
         "dislikes": video.dislikes,
