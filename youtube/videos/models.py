@@ -43,50 +43,32 @@ class Video(models.Model):
             return ""
 
         @property
-        def display_thumbnail_url(self): # <--- LINE 41: Ensure this has 4 spaces!
+        def display_thumbnail_url(self):
+            # 1. Check for manual thumbnail first
             if self.thumbnail:
                 return self.thumbnail.url
             
+            # 2. If missing, generate one from the video automatically
+            # This prevents the "AttributeError" on your listing page
             if self.video_file:
                 try:
-                    public_id = self.video_file.name.rsplit('.', 1)[0]
                     url, options = utils.cloudinary_url(
-                        public_id,
+                        self.video_file.name,
                         resource_type="video",
                         format="jpg",
                         frame="1"
                     )
                     return url
                 except Exception:
-                    return ""
+                    return "" # Fallback to empty if Cloudinary fails
             return ""
-    # @property
-    # def display_thumbnail_url(self):
-    #     # 1. Check for manual thumbnail first
-    #     if self.thumbnail:
-    #         return self.thumbnail.url
-        
-    #     # 2. If missing, generate one from the video automatically
-    #     # This prevents the "AttributeError" on your listing page
-    #     if self.video_file:
-    #         try:
-    #             url, options = utils.cloudinary_url(
-    #                 self.video_file.name,
-    #                 resource_type="video",
-    #                 format="jpg",
-    #                 frame="1"
-    #             )
-    #             return url
-    #         except Exception:
-    #             return "" # Fallback to empty if Cloudinary fails
-    #     return ""
 
 
-    # @property
-    # def display_thumbnail_url(self):
-    #     if self.thumbnail:
-    #         return self.thumbnail.url
-    #     return ""
+        # @property
+        # def display_thumbnail_url(self):
+        #     if self.thumbnail:
+        #         return self.thumbnail.url
+        #     return ""
 
 class VideoLike(models.Model):
     LIKE = 1
