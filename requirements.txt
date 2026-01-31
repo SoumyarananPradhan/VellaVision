@@ -21,3 +21,5 @@ dj-database-url
 psycopg2-binary
 django-imagekit==5.0.0
 pillow>=11.0.0
+django-cloudinary-storage
+cloudinary
