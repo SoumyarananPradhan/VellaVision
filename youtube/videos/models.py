@@ -47,32 +47,29 @@ class Video(models.Model):
 
         @property
         def display_thumbnail_url(self):
-        # 1. Manual override check
             if self.thumbnail:
                 return self.thumbnail.url
-    
-        # 2. Dynamic Fallback Generation
+            
             if self.video_file:
                 try:
-                    # FIX: Index [0] ensures we get the string "videos/filename" not a list
+                    # 1. Extract the clean Public ID (strip extension)
+                    # 'videos/my_video.mp4' -> 'videos/my_video'
                     public_id = self.video_file.name.rsplit('.', 1)[0]
                     
+                    # 2. Build the precise transformation URL
                     url, _ = utils.cloudinary_url(
                         public_id,
-                        resource_type="video",
-                        format="jpg",
+                        resource_type="video", # MANDATORY for video sources
+                        format="jpg",          # Convert frame to JPG
                         transformation=[
-                            {'so': '1'}, # Start Offset: Capture frame at 1 second
-                            {'width': 480, 'crop': "scale", 'quality': "auto"}
+                            {'so': '1'},       # Start Offset: Capture at 1 second mark
+                            {'width': 400, 'crop': "fill", 'aspect_ratio': "16:9"}
                         ]
                     )
                     return url
                 except Exception as e:
-                    # Log the error in production logs for observability
-                    print(f"Thumbnail generation error: {e}")
-                    return "/static/images/default_video_icon.png"
-            
-            return "/static/images/default_video_icon.png"
+                    return "/static/images/default_thumb.png"
+            return "/static/images/default_thumb.png"
         # @property
         # def display_thumbnail_url(self):
 

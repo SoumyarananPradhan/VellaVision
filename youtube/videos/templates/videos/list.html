@@ -18,11 +18,18 @@ Videos - VellaVision
             <div class="video-thumbnail">
                 <img src="{{ video.display_thumbnail_url }}" 
                     alt="{{ video.title }}" 
+                    class="grid-img"
+                    loading="lazy">
+            </div>
+            
+            {% comment %} <div class="video-thumbnail">
+                <img src="{{ video.display_thumbnail_url }}" 
+                    alt="{{ video.title }}" 
                     class="img-fluid"
                     style="aspect-ratio: 16/9; object-fit: cover;"
                     loading="lazy">
                 <span class="play-icon">▶</span>
-            </div>
+            </div> {% endcomment %}
            
             {% comment %} <div class="video-thumbnail">
                 <img src="{{ video.display_thumbnail_url|default:'/static/images/placeholder.png' }}" alt="{{ video.title }}">
