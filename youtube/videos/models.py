@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
+from cloudinary_storage.validators import validate_video
+from cloudinary_storage.storage import VideoMediaCloudinaryStorage
 
 class Video(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="videos")
@@ -7,8 +10,9 @@ class Video(models.Model):
     description = models.TextField(blank=True)
 
     # We use FileField now. Cloudinary handles the storage automatically.
-    video_file = models.FileField(upload_to='videos/')
-    thumbnail = models.ImageField(upload_to='thumbnails/', blank=True)
+    video_file = models.FileField(upload_to='videos/',storage=VideoMediaCloudinaryStorage(),
+        validators=[validate_video])
+    thumbnail = models.ImageField(upload_to='thumbnails/', blank=True, null=True)
 
     views = models.PositiveIntegerField(default=0)
     likes = models.PositiveIntegerField(default=0)
