@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Register{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <h2>Create Account</h2>
+    </div>
+
+    <form method="post" action="{% url 'accounts:register' %}" class="auth-form">
+        {% csrf_token %}
+        {% if form.errors %}
+            <ul class="errorlist">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error|escape }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error|escape }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <div class="form-group">
+            <label for="id_username">Username:</label>
+            <input type="text" name="username" id="id_username" class="form-control" placeholder="Enter a username" value="{{ form.username.value|default:'' }}" required autofocus max_length=150>
+        </div>
+        <div class="form-group">
+            <label for="id_email">Email:</label>
+            <input type="email" name="email" id="id_email" class="form-control" placeholder="Enter your email" value="{{ form.email.value|default:'' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="id_password1">Password:</label>
+            <input type="password" name="password1" id="id_password1" class="form-control" placeholder="Enter a password" required>
+            <span>At least 8 characters...</span>
+        </div>
+        <div class="form-group">
+            <label for="id_password2">Password:</label>
+            <input type="password" name="password2" id="id_password2" class="form-control" placeholder="Confirm your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Account</button>
+    </form>
+    <div class="auth-footer">
+        <p>Already have an account? <a href="{% url 'accounts:login' %}">Sign in here</a></p>
+{% endblock%}

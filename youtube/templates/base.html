@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VellaVision{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/messages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/forms.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-left">
+            <a href="/" class="navbar-brand">
+                <span class="navbar-icon">📺</span>
+                <span class="navbar-title">VellaVision</span>
+            </a>
+        </div>
+        <ul class="navbar-nav">
+            {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a href="{% url 'videos:upload' %}" class="nav-link btn-upload">Upload Video</a>
+                </li>
+                <li><span class='nav-username'>Hello, {{ user.username }}!</span></li>
+                <li>
+                    <form method="post" action="{% url 'accounts:logout' %}" class='logout-form'>
+                        {% csrf_token %}
+                        <button type="submit" class="nav-link btn-outline btn-logout">Logout</button>
+                    </form>
+                </li>
+            {% else %}
+                <li class="nav-item">
+                    <a href="{% url 'accounts:login' %}" class="nav-link">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'accounts:register' %}" class="nav-link btn-primary">Sign Up</a>
+                </li>
+            {% endif %}
+        </ul>
+        </div>
+    </nav>
+    <main class="main-content">
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="message {{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
