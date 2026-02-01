@@ -121,6 +121,16 @@ Visit: http://127.0.0.1:8000/
 
 ---
 
+🖼️ Thumbnail Support (Current Status)
+
+Thumbnail previews are not available in the current version of the application.
+  - Videos are uploaded and streamed correctly using Cloudinary
+  - The backend stores video metadata and playback URLs
+  - Thumbnail generation is planned using Cloudinary video-to-image transformations
+This feature is intentionally deferred to keep the upload pipeline simple, stable, and production-safe.
+
+---
+
 ## 📌 Future Enhancements
 
 - 💬 Comments System
